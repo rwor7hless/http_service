@@ -1,0 +1,15 @@
+
+[Unit]
+Description=Simple HTTP Upload Server
+After=network.target
+
+[Service]
+ExecStart=/usr/local/bin/simple_http /etc/simple_http.conf
+Restart=on-failure
+User=nobody
+Group=nogroup
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
