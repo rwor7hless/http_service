@@ -30,7 +30,7 @@ echo "✓ Сервер запущен (PID: $SERVER_PID)"
 # Тест GET запроса
 echo "3. Тест GET запроса (получение формы)..."
 RESPONSE=$(curl -s http://localhost:8080/)
-if echo "$RESPONSE" | grep -q "Upload File"; then
+if echo "$RESPONSE" | grep -q "File Upload"; then
     echo "✓ GET запрос работает"
 else
     echo "ОШИБКА: GET запрос не вернул форму"

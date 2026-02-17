@@ -173,6 +173,16 @@ int start_server(server_config_t*c){
         
         // Обработка POST запроса
         if(strcmp(req.method,"POST")==0 && strcmp(req.path,"/upload")==0){
+            // Находим начало тела запроса в буфере
+            char *body_ptr = strstr(buf, "\r\n\r\n");
+            if(!body_ptr){
+                http_error(cl,400,"Bad Request: Incomplete headers");
+                close(cl); continue;
+            }
+            body_ptr += 4;
+            size_t header_len = body_ptr - buf;
+            size_t initial_body_len = (size_t)r > header_len ? (size_t)r - header_len : 0;
+            
             char boundary[128];
             if(extract_boundary(req.content_type, boundary, sizeof(boundary))<0){
                 http_error(cl,400,"Bad Request: No boundary");
@@ -191,7 +201,8 @@ int start_server(server_config_t*c){
             }
             
             int result = parse_multipart(cl, boundary, filename, sizeof(filename), 
-                                        f, req.content_length);
+                                        f, req.content_length,
+                                        body_ptr, initial_body_len);
             fclose(f);
             
             if(result<0){
@@ -220,7 +231,7 @@ int start_server(server_config_t*c){
                 "HTTP/1.1 200 OK\r\n"
                 "Content-Type: text/plain\r\n"
                 "Content-Length: %zu\r\n"
-                "\r\nFile uploaded: %s", strlen(display_name) + 14, display_name);
+                "\r\nFile uploaded: %s", strlen(display_name) + 15, display_name);
             send(cl, success_msg, msg_len, 0);
             close(cl); continue;
         }

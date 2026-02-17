@@ -7,24 +7,31 @@
 #include <stdlib.h>
 
 int parse_multipart(int fd, const char *boundary, char *filename, size_t fn_size, 
-                    FILE *out, size_t total) {
+                    FILE *out, size_t total, const char *initial_data, size_t initial_len) {
     if (!boundary || !*boundary) return -1;
+    if (total == 0 || total > MAX_BODY_SIZE) return -1;
     
-    char *buf = malloc(MAX_BODY_SIZE);
+    char *buf = malloc(total + 1);
     if (!buf) return -1;
     
     size_t received = 0;
     char boundary_marker[256];
     snprintf(boundary_marker, sizeof(boundary_marker), "--%s", boundary);
     
-    // Читаем весь запрос
-    while (received < total && received < MAX_BODY_SIZE) {
-        ssize_t r = recv(fd, buf + received, MAX_BODY_SIZE - received, 0);
+    // Копируем данные тела, уже полученные вместе с заголовками
+    if (initial_data && initial_len > 0) {
+        size_t copy_len = (initial_len < total) ? initial_len : total;
+        memcpy(buf, initial_data, copy_len);
+        received = copy_len;
+    }
+    
+    // Дочитываем оставшиеся данные из сокета
+    while (received < total) {
+        ssize_t r = recv(fd, buf + received, total - received, 0);
         if (r <= 0) { free(buf); return -1; }
         received += r;
     }
-    
-    if (received > MAX_BODY_SIZE) { free(buf); return -1; }
+    buf[received] = '\0';
     
     // Ищем первый boundary
     char *start = strstr(buf, boundary_marker);
