@@ -1,0 +1,33 @@
+%%{init: {"flowchart": {"curve": "stepBefore", "rankSpacing": 60, "nodeSpacing": 40}} }%%
+flowchart TD
+    START([Начало load_config])
+    N1[Применение настроек по умолчанию\nадрес · порт · каталог · учётные данные]
+    N2[\Открытие файла конфигурации\]
+    D1{Файл найден?}
+    E1([Завершение с настройками\nпо умолчанию — return -1])
+    LOOP{Следующая строка есть?}
+    N3[Разбор строки\nв формате ключ=значение]
+    D2{Строка является\nпараметром конфигурации?}
+    N4[Обновление соответствующего\nпараметра в структуре config]
+    N5[Закрытие файла конфигурации]
+    END([Конфигурация загружена — return 0])
+
+    START --> N1 --> N2 --> D1
+    D1 -- Нет --> E1
+    D1 -- Да --> LOOP
+    LOOP -- Да --> N3 --> D2
+    D2 -- Нет --> LOOP
+    D2 -- Да --> N4 --> LOOP
+    LOOP -- Нет --> N5 --> END
+
+    classDef terminal  fill:#111,color:#fff,stroke:#111,stroke-width:2px
+    classDef process   fill:#fff,color:#111,stroke:#111,stroke-width:2px
+    classDef decision  fill:#e0e0e0,color:#111,stroke:#111,stroke-width:2px
+    classDef io        fill:#f0f0f0,color:#111,stroke:#111,stroke-width:2px,stroke-dasharray:6 3
+    classDef error     fill:#444,color:#fff,stroke:#222,stroke-width:2px
+
+    class START,END terminal
+    class E1 error
+    class N1,N3,N4,N5 process
+    class D1,D2,LOOP decision
+    class N2 io

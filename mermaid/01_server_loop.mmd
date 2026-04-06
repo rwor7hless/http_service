@@ -1,0 +1,43 @@
+%%{init: {"flowchart": {"curve": "stepBefore", "rankSpacing": 60, "nodeSpacing": 40}} }%%
+flowchart TD
+    START([Запуск сервера])
+    N1[Создание TCP-сокета]
+    D1{Сокет создан?}
+    E1([Ошибка — завершение])
+    N2[Настройка параметров сокета\nПривязка к адресу и порту]
+    N3[Создание каталога загрузок\nесли он отсутствует]
+    N4[Игнорирование сигнала\nразрыва соединения]
+    N5[Запись в лог — сервер запущен]
+    LOOP([Ожидание входящих соединений])
+    N6[Приём нового соединения от клиента]
+    D2{Соединение принято?}
+    E2([Пропуск — следующая итерация])
+    N7[Определение IP-адреса клиента\nУстановка таймаута сокета]
+    N8[\Чтение HTTP-запроса от клиента\]
+    D3{Данные получены?}
+    E3([Закрытие соединения])
+    N9[Разбор HTTP-заголовков запроса]
+    N10[Маршрутизация и обработка запроса\nсм. диаграмму 2]
+    N11[Закрытие соединения с клиентом]
+
+    START --> N1 --> D1
+    D1 -- Нет --> E1
+    D1 -- Да --> N2 --> N3 --> N4 --> N5 --> LOOP --> N6 --> D2
+    D2 -- Нет --> E2
+    D2 -- Да --> N7 --> N8 --> D3
+    D3 -- Нет --> E3
+    D3 -- Да --> N9 --> N10 --> N11 --> N6
+
+    classDef terminal  fill:#111,color:#fff,stroke:#111,stroke-width:2px
+    classDef process   fill:#fff,color:#111,stroke:#111,stroke-width:2px
+    classDef decision  fill:#e0e0e0,color:#111,stroke:#111,stroke-width:2px
+    classDef io        fill:#f0f0f0,color:#111,stroke:#111,stroke-width:2px,stroke-dasharray:6 3
+    classDef error     fill:#444,color:#fff,stroke:#222,stroke-width:2px
+    classDef ref       fill:#ddd,color:#111,stroke:#111,stroke-width:2px,stroke-dasharray:4 2
+
+    class START,LOOP terminal
+    class E1,E2,E3 error
+    class N1,N2,N3,N4,N5,N6,N7,N9,N11 process
+    class N10 ref
+    class D1,D2,D3 decision
+    class N8 io

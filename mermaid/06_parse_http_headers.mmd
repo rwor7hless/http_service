@@ -1,0 +1,28 @@
+%%{init: {"flowchart": {"curve": "stepBefore", "rankSpacing": 60, "nodeSpacing": 40}} }%%
+flowchart TD
+    START([Начало parse_http_headers])
+    N1[Инициализация структуры\nзапроса нулевыми значениями]
+    N2[Извлечение метода запроса\nи пути из стартовой строки]
+    D1{Присутствует\nContent-Length?}
+    N3[Сохранение размера\nтела запроса]
+    D2{Присутствует\nContent-Type?}
+    N4[Сохранение типа\nсодержимого]
+    D3{Присутствует\nAuthorization?}
+    N5[Сохранение данных\nавторизации]
+    END([return 0])
+
+    START --> N1 --> N2 --> D1
+    D1 -- Да --> N3 --> D2
+    D1 -- Нет --> D2
+    D2 -- Да --> N4 --> D3
+    D2 -- Нет --> D3
+    D3 -- Да --> N5 --> END
+    D3 -- Нет --> END
+
+    classDef terminal  fill:#111,color:#fff,stroke:#111,stroke-width:2px
+    classDef process   fill:#fff,color:#111,stroke:#111,stroke-width:2px
+    classDef decision  fill:#e0e0e0,color:#111,stroke:#111,stroke-width:2px
+
+    class START,END terminal
+    class N1,N2,N3,N4,N5 process
+    class D1,D2,D3 decision

@@ -1,0 +1,135 @@
+<mxGraphModel dx="1422" dy="762" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+  <root>
+    <mxCell id="0" />
+    <mxCell id="1" parent="0" />
+
+    <!-- Title -->
+    <mxCell id="t1" value="Рисунок 1 — Главный цикл сервера (start_server)" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=13;fontStyle=1;fontColor=#1D3557;" vertex="1" parent="1">
+      <mxGeometry x="125" y="20" width="600" height="30" as="geometry" />
+    </mxCell>
+
+    <!-- START -->
+    <mxCell id="n1" value="НАЧАЛО" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#2E86AB;fontColor=#ffffff;strokeColor=#1B6A8A;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+      <mxGeometry x="300" y="70" width="200" height="45" as="geometry" />
+    </mxCell>
+
+    <!-- socket() -->
+    <mxCell id="n2" value="socket(AF_INET, SOCK_STREAM, 0)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#A8DADC;strokeColor=#5A9EA0;fontSize=11;" vertex="1" parent="1">
+      <mxGeometry x="275" y="155" width="250" height="45" as="geometry" />
+    </mxCell>
+
+    <!-- socket error? -->
+    <mxCell id="d1" value="Ошибка?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#F4A261;strokeColor=#D4831E;fontSize=11;" vertex="1" parent="1">
+      <mxGeometry x="300" y="240" width="200" height="60" as="geometry" />
+    </mxCell>
+    <mxCell id="e1" value="return -1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E76F51;fontColor=#ffffff;strokeColor=#C54E2F;fontSize=10;" vertex="1" parent="1">
+      <mxGeometry x="560" y="252" width="100" height="35" as="geometry" />
+    </mxCell>
+
+    <!-- setsockopt/bind/listen -->
+    <mxCell id="n3" value="setsockopt(SO_REUSEADDR)&#xa;bind(address, port)&#xa;listen(backlog=5)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#A8DADC;strokeColor=#5A9EA0;fontSize=11;" vertex="1" parent="1">
+      <mxGeometry x="275" y="345" width="250" height="55" as="geometry" />
+    </mxCell>
+
+    <!-- mkdir upload_dir -->
+    <mxCell id="n4" value="stat(upload_dir) → mkdir если не существует" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#A8DADC;strokeColor=#5A9EA0;fontSize=11;" vertex="1" parent="1">
+      <mxGeometry x="275" y="445" width="250" height="45" as="geometry" />
+    </mxCell>
+
+    <!-- signal SIGPIPE -->
+    <mxCell id="n5" value="signal(SIGPIPE, SIG_IGN)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#A8DADC;strokeColor=#5A9EA0;fontSize=11;" vertex="1" parent="1">
+      <mxGeometry x="275" y="535" width="250" height="45" as="geometry" />
+    </mxCell>
+
+    <!-- LOG INFO server started -->
+    <mxCell id="n5b" value="log_msg(&quot;INFO&quot;, &quot;server started on %s:%d&quot;, ...)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E9C46A;strokeColor=#C49B1C;fontSize=10;" vertex="1" parent="1">
+      <mxGeometry x="275" y="620" width="250" height="45" as="geometry" />
+    </mxCell>
+
+    <!-- LOOP label -->
+    <mxCell id="loop_lbl" value="∞ бесконечный цикл" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontSize=10;fontStyle=2;fontColor=#2E86AB;" vertex="1" parent="1">
+      <mxGeometry x="125" y="710" width="160" height="25" as="geometry" />
+    </mxCell>
+
+    <!-- accept() -->
+    <mxCell id="n6" value="accept() — ожидание входящего соединения" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#A8DADC;strokeColor=#5A9EA0;fontSize=11;" vertex="1" parent="1">
+      <mxGeometry x="275" y="710" width="250" height="45" as="geometry" />
+    </mxCell>
+
+    <!-- accept error? -->
+    <mxCell id="d2" value="cl &lt; 0&#xa;(ошибка)?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#F4A261;strokeColor=#D4831E;fontSize=11;" vertex="1" parent="1">
+      <mxGeometry x="300" y="800" width="200" height="60" as="geometry" />
+    </mxCell>
+    <mxCell id="e2" value="continue" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E76F51;fontColor=#ffffff;strokeColor=#C54E2F;fontSize=10;" vertex="1" parent="1">
+      <mxGeometry x="140" y="812" width="100" height="35" as="geometry" />
+    </mxCell>
+
+    <!-- getpeername + set timeout -->
+    <mxCell id="n7" value="getpeername() → peer_ip&#xa;SO_RCVTIMEO = SO_SNDTIMEO = 10с" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#A8DADC;strokeColor=#5A9EA0;fontSize=11;" vertex="1" parent="1">
+      <mxGeometry x="275" y="910" width="250" height="50" as="geometry" />
+    </mxCell>
+
+    <!-- recv headers -->
+    <mxCell id="n8" value="recv(cl, buf, MAX_HEADER_SIZE)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E9C46A;strokeColor=#C49B1C;fontSize=11;" vertex="1" parent="1">
+      <mxGeometry x="275" y="1005" width="250" height="45" as="geometry" />
+    </mxCell>
+
+    <!-- recv error? -->
+    <mxCell id="d3" value="r &lt;= 0?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#F4A261;strokeColor=#D4831E;fontSize=11;" vertex="1" parent="1">
+      <mxGeometry x="300" y="1095" width="200" height="55" as="geometry" />
+    </mxCell>
+    <mxCell id="e3" value="close(cl)&#xa;continue" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E76F51;fontColor=#ffffff;strokeColor=#C54E2F;fontSize=10;" vertex="1" parent="1">
+      <mxGeometry x="560" y="1105" width="100" height="35" as="geometry" />
+    </mxCell>
+
+    <!-- parse_http_headers -->
+    <mxCell id="n9" value="parse_http_headers(buf, r, &amp;req)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#A8DADC;strokeColor=#5A9EA0;fontSize=11;" vertex="1" parent="1">
+      <mxGeometry x="275" y="1195" width="250" height="45" as="geometry" />
+    </mxCell>
+
+    <!-- handle_request ref -->
+    <mxCell id="n10" value="handle_request(req, cl, cfg)&#xa;→ см. рис. 2" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#D4E6F1;strokeColor=#2874A6;fontSize=11;fontStyle=2;" vertex="1" parent="1">
+      <mxGeometry x="275" y="1285" width="250" height="45" as="geometry" />
+    </mxCell>
+
+    <!-- close cl -->
+    <mxCell id="n11" value="close(cl)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#A8DADC;strokeColor=#5A9EA0;fontSize=11;" vertex="1" parent="1">
+      <mxGeometry x="275" y="1375" width="250" height="45" as="geometry" />
+    </mxCell>
+
+    <!-- ═══ ARROWS ═══ -->
+    <mxCell id="a1"  style="edgeStyle=orthogonalEdgeStyle;" edge="1" source="n1"  target="n2"  parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+    <mxCell id="a2"  style="edgeStyle=orthogonalEdgeStyle;" edge="1" source="n2"  target="d1"  parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+    <!-- d1 Yes → error -->
+    <mxCell id="a3y" value="Да" style="edgeStyle=orthogonalEdgeStyle;exitX=1;exitY=0.5;exitDx=0;exitDy=0;" edge="1" source="d1" target="e1" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+    <!-- d1 No → n3 -->
+    <mxCell id="a3n" value="Нет" style="edgeStyle=orthogonalEdgeStyle;exitX=0.5;exitY=1;exitDx=0;exitDy=0;" edge="1" source="d1" target="n3" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+    <mxCell id="a4"  style="edgeStyle=orthogonalEdgeStyle;" edge="1" source="n3"  target="n4"  parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+    <mxCell id="a5"  style="edgeStyle=orthogonalEdgeStyle;" edge="1" source="n4"  target="n5"  parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+    <mxCell id="a6"  style="edgeStyle=orthogonalEdgeStyle;" edge="1" source="n5"  target="n5b" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+    <mxCell id="a7"  style="edgeStyle=orthogonalEdgeStyle;" edge="1" source="n5b" target="n6"  parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+    <mxCell id="a8"  style="edgeStyle=orthogonalEdgeStyle;" edge="1" source="n6"  target="d2"  parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+    <!-- d2 Да → continue -->
+    <mxCell id="a9y" value="Да" style="edgeStyle=orthogonalEdgeStyle;exitX=0;exitY=0.5;exitDx=0;exitDy=0;" edge="1" source="d2" target="e2" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+    <!-- d2 Нет → n7 -->
+    <mxCell id="a9n" value="Нет" style="edgeStyle=orthogonalEdgeStyle;exitX=0.5;exitY=1;exitDx=0;exitDy=0;" edge="1" source="d2" target="n7" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+    <mxCell id="a10" style="edgeStyle=orthogonalEdgeStyle;" edge="1" source="n7"  target="n8"  parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+    <mxCell id="a11" style="edgeStyle=orthogonalEdgeStyle;" edge="1" source="n8"  target="d3"  parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+    <!-- d3 Да → close+continue -->
+    <mxCell id="a12y" value="Да" style="edgeStyle=orthogonalEdgeStyle;exitX=1;exitY=0.5;exitDx=0;exitDy=0;" edge="1" source="d3" target="e3" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+    <!-- d3 Нет → parse headers -->
+    <mxCell id="a12n" value="Нет" style="edgeStyle=orthogonalEdgeStyle;exitX=0.5;exitY=1;exitDx=0;exitDy=0;" edge="1" source="d3" target="n9" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+    <mxCell id="a13" style="edgeStyle=orthogonalEdgeStyle;" edge="1" source="n9"  target="n10" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+    <mxCell id="a14" style="edgeStyle=orthogonalEdgeStyle;" edge="1" source="n10" target="n11" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+    <!-- loop back: n11 → n6 -->
+    <mxCell id="loop" value="следующее соединение" style="edgeStyle=orthogonalEdgeStyle;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;rounded=0;strokeColor=#2E86AB;fontColor=#2E86AB;fontSize=9;" edge="1" source="n11" target="n6" parent="1">
+      <mxGeometry relative="1" as="geometry">
+        <Array as="points">
+          <mxPoint x="200" y="1397" />
+          <mxPoint x="200" y="732" />
+        </Array>
+      </mxGeometry>
+    </mxCell>
+
+  </root>
+</mxGraphModel>

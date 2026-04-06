@@ -1,0 +1,58 @@
+%%{init: {"flowchart": {"curve": "stepBefore", "rankSpacing": 60, "nodeSpacing": 40}} }%%
+flowchart TD
+    START([Получен HTTP-запрос])
+    D1{Метод GET?}
+    D_GET{Запрос главной страницы?}
+    R_FORM[\Отправка HTML-формы — 200\]
+    E_404A([404 Not Found])
+    D2{POST /upload?}
+    E_404B([404 Not Found])
+    D3{Авторизация включена\nи данные неверны?}
+    E_401([401 Unauthorized])
+    N1[Поиск конца заголовков\nв принятом буфере]
+    D4{Заголовки получены целиком?}
+    E_400A([400 Bad Request])
+    N2[Извлечение разделителя\nmultipart из Content-Type]
+    D5{Разделитель найден?}
+    E_400B([400 Bad Request])
+    N3[\Создание временного файла\nдля приёма данных\]
+    D6{Файл создан успешно?}
+    E_500([500 Internal Server Error])
+    N4[Приём и разбор тела запроса\nв формате multipart — диаграмма 3]
+    D7{Разбор успешен?}
+    E_400C([Удаление временного файла\n400 Bad Request])
+    N5[Переименование файла\nпо имени из запроса]
+    R_OK[\Ответ 200 OK — File uploaded\]
+    END([Конец обработки])
+
+    START --> D1
+    D1 -- Да --> D_GET
+    D1 -- Нет --> D2
+    D_GET -- Да --> R_FORM
+    D_GET -- Нет --> E_404A
+    D2 -- Нет --> E_404B
+    D2 -- Да --> D3
+    D3 -- Да --> E_401
+    D3 -- Нет --> N1 --> D4
+    D4 -- Нет --> E_400A
+    D4 -- Да --> N2 --> D5
+    D5 -- Нет --> E_400B
+    D5 -- Да --> N3 --> D6
+    D6 -- Нет --> E_500
+    D6 -- Да --> N4 --> D7
+    D7 -- Нет --> E_400C
+    D7 -- Да --> N5 --> R_OK --> END
+
+    classDef terminal  fill:#111,color:#fff,stroke:#111,stroke-width:2px
+    classDef process   fill:#fff,color:#111,stroke:#111,stroke-width:2px
+    classDef decision  fill:#e0e0e0,color:#111,stroke:#111,stroke-width:2px
+    classDef io        fill:#f0f0f0,color:#111,stroke:#111,stroke-width:2px,stroke-dasharray:6 3
+    classDef error     fill:#444,color:#fff,stroke:#222,stroke-width:2px
+    classDef ref       fill:#ddd,color:#111,stroke:#111,stroke-width:2px,stroke-dasharray:4 2
+
+    class START,END terminal
+    class E_404A,E_404B,E_401,E_400A,E_400B,E_400C,E_500 error
+    class N1,N2,N5 process
+    class N4 ref
+    class D1,D2,D3,D4,D5,D6,D7,D_GET decision
+    class R_FORM,N3,R_OK io

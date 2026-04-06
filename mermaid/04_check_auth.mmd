@@ -1,0 +1,38 @@
+%%{init: {"flowchart": {"curve": "stepBefore", "rankSpacing": 60, "nodeSpacing": 40}} }%%
+flowchart TD
+    START([Начало check_auth])
+    D1{Заголовок Authorization\nначинается со схемы Basic?}
+    E_NO([Доступ отклонён — return 0])
+    N1[Извлечение Base64-токена\nиз заголовка авторизации]
+    N2[Инициализация состояния\nдекодирования Base64]
+    LOOP{Ещё есть символы Base64?}
+    N3[Декодирование очередного\nсимвола алфавита Base64]
+    D2{Накоплен полный байт?}
+    N4[Запись декодированного\nбайта в выходной буфер]
+    N5[Переход к следующему символу]
+    N6[Составление строки\nлогин:пароль из конфига]
+    D3{Декодированные данные\nсовпадают с ожидаемыми?}
+    E_OK([Доступ разрешён — return 1])
+    E_FAIL([Доступ отклонён — return 0])
+
+    START --> D1
+    D1 -- Нет --> E_NO
+    D1 -- Да --> N1 --> N2 --> LOOP
+    LOOP -- Да --> N3 --> D2
+    D2 -- Да --> N4 --> N5 --> LOOP
+    D2 -- Нет --> N5
+    LOOP -- Нет --> N6 --> D3
+    D3 -- Да --> E_OK
+    D3 -- Нет --> E_FAIL
+
+    classDef terminal  fill:#111,color:#fff,stroke:#111,stroke-width:2px
+    classDef process   fill:#fff,color:#111,stroke:#111,stroke-width:2px
+    classDef decision  fill:#e0e0e0,color:#111,stroke:#111,stroke-width:2px
+    classDef error     fill:#444,color:#fff,stroke:#222,stroke-width:2px
+    classDef success   fill:#222,color:#fff,stroke:#111,stroke-width:2px
+
+    class START terminal
+    class E_NO,E_FAIL error
+    class E_OK success
+    class N1,N2,N3,N4,N5,N6 process
+    class D1,D2,D3,LOOP decision

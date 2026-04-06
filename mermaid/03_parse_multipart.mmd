@@ -1,0 +1,60 @@
+%%{init: {"flowchart": {"curve": "stepBefore", "rankSpacing": 60, "nodeSpacing": 40}} }%%
+flowchart TD
+    START([Начало parse_multipart])
+    D1{Размер тела\nв пределах 1..50 МБ?}
+    E1([Ошибка — return -1])
+    N1[Выделение памяти\nпод всё тело запроса]
+    D_MEM{Память выделена?}
+    E2([Ошибка памяти — return -1])
+    N2[Копирование уже принятых\nданных заголовочного буфера]
+    LOOP{Всё тело запроса принято?}
+    N3[\Приём следующего\nфрагмента по сокету\]
+    D2{Соединение активно?}
+    E3([Освобождение памяти\nreturn -1])
+    N3B[Учёт количества принятых байт]
+    N4[Поиск открывающего\nразделителя multipart]
+    D3{Разделитель найден?}
+    E4([Освобождение памяти\nreturn -1])
+    N5[Поиск конца заголовков\nтекущей части]
+    D4{Конец заголовков найден?}
+    E5([Освобождение памяти\nreturn -1])
+    N6[Извлечение имени файла\nиз Content-Disposition]
+    N7[Определение позиции\nи границ данных файла]
+    D5{Закрывающий\nразделитель найден?}
+    E6([Освобождение памяти\nreturn -1])
+    N8[Отсечение завершающих\nсимволов переноса строки]
+    N9[\Запись данных файла на диск\]
+    D6{Все байты записаны?}
+    E7([Освобождение памяти\nreturn -1])
+    N10[Освобождение буфера]
+    END([Успех — return 0])
+
+    START --> D1
+    D1 -- Нет --> E1
+    D1 -- Да --> N1 --> D_MEM
+    D_MEM -- Нет --> E2
+    D_MEM -- Да --> N2 --> LOOP
+    LOOP -- Нет --> N3 --> D2
+    D2 -- Нет --> E3
+    D2 -- Да --> N3B --> LOOP
+    LOOP -- Да --> N4 --> D3
+    D3 -- Нет --> E4
+    D3 -- Да --> N5 --> D4
+    D4 -- Нет --> E5
+    D4 -- Да --> N6 --> N7 --> D5
+    D5 -- Нет --> E6
+    D5 -- Да --> N8 --> N9 --> D6
+    D6 -- Нет --> E7
+    D6 -- Да --> N10 --> END
+
+    classDef terminal  fill:#111,color:#fff,stroke:#111,stroke-width:2px
+    classDef process   fill:#fff,color:#111,stroke:#111,stroke-width:2px
+    classDef decision  fill:#e0e0e0,color:#111,stroke:#111,stroke-width:2px
+    classDef io        fill:#f0f0f0,color:#111,stroke:#111,stroke-width:2px,stroke-dasharray:6 3
+    classDef error     fill:#444,color:#fff,stroke:#222,stroke-width:2px
+
+    class START,END terminal
+    class E1,E2,E3,E4,E5,E6,E7 error
+    class N1,N2,N3B,N4,N5,N6,N7,N8,N10 process
+    class D1,D_MEM,LOOP,D2,D3,D4,D5,D6 decision
+    class N3,N9 io

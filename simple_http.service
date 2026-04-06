@@ -1,15 +1,42 @@
 
 [Unit]
 Description=Simple HTTP Upload Server
-After=network.target
+After=network-online.target
+Wants=network-online.target
 
 [Service]
 ExecStart=/usr/local/bin/simple_http /etc/simple_http.conf
 Restart=on-failure
-User=nobody
-Group=nogroup
-NoNewPrivileges=true
-PrivateTmp=true
+
+# Изолированный пользователь: создаётся только для этого сервиса,
+# его UID уникален и недоступен другим процессам в системе
+DynamicUser=true
+
+# Каталог для загрузок: /var/lib/simple_http, владелец — динамический пользователь
+# Режим 0700: только сам сервис может читать и писать в этот каталог
+StateDirectory=simple_http
+StateDirectoryMode=0700
+
+# Права доступа к новым файлам: только владелец (rw--------)
+UMask=0077
+
+# Изоляция файловой системы
+ProtectSystem=strict              # корневая ФС только для чтения
+ProtectHome=true                  # нет доступа к /home, /root, /run/user
+ReadWritePaths=/var/lib/simple_http  # единственный каталог с правом записи
+PrivateTmp=true                   # изолированный /tmp, недоступный другим
+
+# Ограничение привилегий
+NoNewPrivileges=true              # процесс не может получить новые привилегии
+PrivateDevices=true               # нет доступа к устройствам (/dev)
+ProtectKernelTunables=true        # нет записи в /proc/sys
+ProtectKernelModules=true         # нет загрузки модулей ядра
+ProtectControlGroups=true         # нет доступа к cgroups
+RestrictAddressFamilies=AF_INET   # только IPv4-сокеты
+LockPersonality=true              # фиксация ABI процесса
+MemoryDenyWriteExecute=true       # нет исполняемых анонимных страниц памяти
+RestrictRealtime=true             # нет реального времени планировщика
+RestrictNamespaces=true           # нет создания пространств имён
 
 [Install]
 WantedBy=multi-user.target

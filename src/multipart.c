@@ -6,42 +6,38 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-int parse_multipart(int fd, const char *boundary, char *filename, size_t fn_size, 
+int parse_multipart(int fd, const char *boundary, char *filename, size_t fn_size,
                     FILE *out, size_t total, const char *initial_data, size_t initial_len) {
     if (!boundary || !*boundary) return -1;
     if (total == 0 || total > MAX_BODY_SIZE) return -1;
-    
+
     char *buf = malloc(total + 1);
     if (!buf) return -1;
-    
+
     size_t received = 0;
     char boundary_marker[256];
     snprintf(boundary_marker, sizeof(boundary_marker), "--%s", boundary);
-    
-    // Копируем данные тела, уже полученные вместе с заголовками
+
+    /* первый кусок тела уже прочитан вместе с заголовками в server.c */
     if (initial_data && initial_len > 0) {
         size_t copy_len = (initial_len < total) ? initial_len : total;
         memcpy(buf, initial_data, copy_len);
         received = copy_len;
     }
-    
-    // Дочитываем оставшиеся данные из сокета
+
     while (received < total) {
         ssize_t r = recv(fd, buf + received, total - received, 0);
         if (r <= 0) { free(buf); return -1; }
         received += r;
     }
     buf[received] = '\0';
-    
-    // Ищем первый boundary
+
     char *start = strstr(buf, boundary_marker);
     if (!start) { free(buf); return -1; }
-    
-    // Пропускаем boundary и заголовки
+
     char *header_end = strstr(start, "\r\n\r\n");
     if (!header_end) { free(buf); return -1; }
-    
-    // Извлекаем имя файла из заголовков
+
     char *disposition = strstr(start, "Content-Disposition:");
     if (disposition) {
         char *name_start = strstr(disposition, "filename=\"");
@@ -57,24 +53,21 @@ int parse_multipart(int fd, const char *boundary, char *filename, size_t fn_size
             }
         }
     }
-    
-    // Начало данных файла
-    char *data_start = header_end + 4;
-    
-    // Ищем конечный boundary
+
+    char *data_start = header_end + 4; /* после \r\n\r\n */
+
     char *end_boundary = strstr(data_start, boundary_marker);
     if (!end_boundary) { free(buf); return -1; }
-    
-    // Записываем данные файла (без завершающих \r\n перед boundary)
+
+    /* браузер дописывает \r\n перед финальным boundary, нам оно не нужно */
     size_t data_len = end_boundary - data_start;
-    while (data_len > 0 && (data_start[data_len-1] == '\n' || data_start[data_len-1] == '\r')) {
+    while (data_len > 0 && (data_start[data_len-1] == '\n' || data_start[data_len-1] == '\r'))
         data_len--;
-    }
-    
+
     if (fwrite(data_start, 1, data_len, out) != data_len) {
         free(buf); return -1;
     }
-    
+
     free(buf);
     return 0;
 }

@@ -16,6 +16,7 @@ int load_config(const char*path, server_config_t*c){
     FILE*f=fopen(path,"r"); if(!f) return -1;
     char l[256],k[64],v[128];
     while(fgets(l,sizeof l,f)){
+        /* Пропускаем строки без '=' и пустые строки */
         if(sscanf(l,"%63[^=]=%127s",k,v)==2){
             if(!strcmp(k,"address")){
                 strncpy(c->address, v, sizeof(c->address) - 1);

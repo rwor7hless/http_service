@@ -15,8 +15,11 @@
 #include <fcntl.h>
 #include <sys/time.h>
 #include <signal.h>
+#include <time.h>
+#include <stdarg.h>
 
-static const char html_form[] = 
+/* форма встроена в бинарь, отдельный файл не нужен */
+static const char html_form[] =
 "<!DOCTYPE html>\n"
 "<html><head><title>File Upload</title>\n"
 "<script>\n"
@@ -60,6 +63,20 @@ static const char html_form[] =
 "<div id=\"result\"></div>\n"
 "</body></html>\n";
 
+static void log_msg(const char *level, const char *fmt, ...) {
+    time_t t = time(NULL);
+    struct tm *tm = localtime(&t);
+    char ts[32];
+    strftime(ts, sizeof(ts), "%Y-%m-%d %H:%M:%S", tm);
+    fprintf(stderr, "[%s] [%s] ", ts, level);
+    va_list ap;
+    va_start(ap, fmt);
+    vfprintf(stderr, fmt, ap);
+    va_end(ap);
+    fprintf(stderr, "\n");
+    fflush(stderr);
+}
+
 static void send_html_form(int fd) {
     char response[2048];
     int len = snprintf(response, sizeof(response),
@@ -76,156 +93,164 @@ static void send_html_form(int fd) {
 static int extract_boundary(const char *content_type, char *boundary_out, size_t out_size) {
     const char *boundary_start = strstr(content_type, "boundary=");
     if (!boundary_start) return -1;
-    
+
     boundary_start += 9;
-    
-    // Пропускаем кавычки если есть
     if (*boundary_start == '"') boundary_start++;
-    
+
     size_t len = 0;
     const char *p = boundary_start;
     while (*p && *p != ';' && *p != '\r' && *p != '\n' && *p != '"' && *p != ' ') {
-        if (len + 1 < out_size) {
+        if (len + 1 < out_size)
             boundary_out[len++] = *p;
-        }
         p++;
     }
     boundary_out[len] = '\0';
-    
+
     return len > 0 ? 0 : -1;
 }
 
 int start_server(server_config_t*c){
     int s=socket(AF_INET,SOCK_STREAM,0);
     if(s<0){ perror("socket"); return -1; }
-    
-    int o=1; 
+
+    int o=1;
     if(setsockopt(s,SOL_SOCKET,SO_REUSEADDR,&o,sizeof o)<0){
         perror("setsockopt"); close(s); return -1;
     }
-    
+
     struct sockaddr_in a={0};
     a.sin_family=AF_INET;
     a.sin_port=htons(c->port);
     a.sin_addr.s_addr=inet_addr(c->address);
-    
+
     if(bind(s,(void*)&a,sizeof a)<0){
         perror("bind"); close(s); return -1;
     }
-    
+
     if(listen(s,5)<0){
         perror("listen"); close(s); return -1;
     }
-    
-    // Создаем директорию для загрузок если не существует
+
     struct stat st;
     if(stat(c->upload_dir,&st)!=0){
-        if(mkdir(c->upload_dir,0755)<0){
-            perror("mkdir upload_dir"); 
-        }
+        if(mkdir(c->upload_dir,0755)<0)
+            perror("mkdir upload_dir");
     }
-    
-    fprintf(stderr, "Server started on %s:%d\n", c->address, c->port);
-    fprintf(stderr, "Upload directory: %s\n", c->upload_dir);
-    fprintf(stderr, "Auth enabled: %s\n", c->auth_enabled ? "yes" : "no");
-    fflush(stderr);
-    
-    // Игнорируем SIGPIPE чтобы не падать при закрытии соединения
-    signal(SIGPIPE, SIG_IGN);
-    
+
+    log_msg("INFO", "server started on %s:%d", c->address, c->port);
+    log_msg("INFO", "upload dir: %s", c->upload_dir);
+    log_msg("INFO", "auth: %s", c->auth_enabled ? "enabled" : "disabled");
+
+    signal(SIGPIPE, SIG_IGN); /* иначе падаем если клиент закрыл соединение */
+
     for(;;){
         int cl=accept(s,0,0);
         if(cl<0){ perror("accept"); continue; }
-        
-        // Устанавливаем таймаут для чтения
+
+        struct sockaddr_in peer={0};
+        socklen_t plen=sizeof(peer);
+        getpeername(cl,(struct sockaddr*)&peer,&plen);
+        char peer_ip[INET_ADDRSTRLEN];
+        inet_ntop(AF_INET,&peer.sin_addr,peer_ip,sizeof(peer_ip));
+        log_msg("INFO", "connection from %s:%d", peer_ip, ntohs(peer.sin_port));
+
         struct timeval tv;
         tv.tv_sec = SOCKET_TIMEOUT;
         tv.tv_usec = 0;
         setsockopt(cl, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
         setsockopt(cl, SOL_SOCKET, SO_SNDTIMEO, &tv, sizeof(tv));
-        
+
         char buf[MAX_HEADER_SIZE];
         ssize_t r=recv(cl,buf,sizeof buf-1,0);
-        if(r<=0){ 
-            if(r<0 && errno != EAGAIN && errno != EWOULDBLOCK) perror("recv");
-            close(cl); continue; 
+        if(r<=0){
+            if(r<0 && errno != EAGAIN && errno != EWOULDBLOCK)
+                log_msg("WARN", "%s recv error: %s", peer_ip, strerror(errno));
+            else
+                log_msg("WARN", "%s closed connection before sending data", peer_ip);
+            close(cl); continue;
         }
         buf[r]=0;
-        
+
         http_request_t req;
         parse_http_headers(buf,r,&req);
-        
-        // Обработка GET запроса для формы (без авторизации)
+        log_msg("INFO", "%s \"%s %s\" content-length=%zu",
+                peer_ip, req.method, req.path, req.content_length);
+
         if(strcmp(req.method,"GET")==0){
             if(strcmp(req.path,"/")==0 || strcmp(req.path,"/index.html")==0){
+                log_msg("INFO", "%s -> 200 GET /", peer_ip);
                 send_html_form(cl);
                 close(cl); continue;
             }
-            http_error(cl,404,"Not Found"); 
+            log_msg("WARN", "%s -> 404 GET %s", peer_ip, req.path);
+            http_error(cl,404,"Not Found");
             close(cl); continue;
         }
-        
-        // Для POST запросов требуется авторизация
-        if(c->auth_enabled && !check_auth(req.authorization,c)){
-            http_error(cl,401,"Unauthorized"); 
-            close(cl); continue;
-        }
-        
-        // Обработка POST запроса
+
         if(strcmp(req.method,"POST")==0 && strcmp(req.path,"/upload")==0){
-            // Находим начало тела запроса в буфере
+            if(c->auth_enabled && !check_auth(req.authorization,c)){
+                log_msg("WARN", "%s -> 401 bad credentials", peer_ip);
+                http_error(cl,401,"Unauthorized");
+                close(cl); continue;
+            }
             char *body_ptr = strstr(buf, "\r\n\r\n");
             if(!body_ptr){
+                log_msg("WARN", "%s -> 400 incomplete headers", peer_ip);
                 http_error(cl,400,"Bad Request: Incomplete headers");
                 close(cl); continue;
             }
             body_ptr += 4;
             size_t header_len = body_ptr - buf;
             size_t initial_body_len = (size_t)r > header_len ? (size_t)r - header_len : 0;
-            
+
             char boundary[128];
             if(extract_boundary(req.content_type, boundary, sizeof(boundary))<0){
+                log_msg("WARN", "%s -> 400 no boundary in Content-Type", peer_ip);
                 http_error(cl,400,"Bad Request: No boundary");
                 close(cl); continue;
             }
-            
+
+            /* имя файла узнаем только из тела, пока пишем во временный */
             char filename[256] = "upload.bin";
             char filepath[512];
             snprintf(filepath, sizeof(filepath), "%s/%s", c->upload_dir, filename);
-            
+
             FILE*f=fopen(filepath,"wb");
             if(!f){
-                perror("fopen");
+                log_msg("ERR", "fopen %s: %s", filepath, strerror(errno));
                 http_error(cl,500,"Internal Server Error");
                 close(cl); continue;
             }
-            
-            int result = parse_multipart(cl, boundary, filename, sizeof(filename), 
+
+            log_msg("INFO", "%s receiving file, size=%zu bytes", peer_ip, req.content_length);
+
+            int result = parse_multipart(cl, boundary, filename, sizeof(filename),
                                         f, req.content_length,
                                         body_ptr, initial_body_len);
             fclose(f);
-            
+
             if(result<0){
                 unlink(filepath);
+                log_msg("WARN", "%s -> 400 multipart parse failed", peer_ip);
                 http_error(cl,400,"Bad Request: Failed to parse multipart");
                 close(cl); continue;
             }
-            
-            // Используем правильное имя файла если было извлечено
+
             char final_path[512];
             if(strcmp(filename,"upload.bin")!=0 && filename[0]!='\0'){
                 snprintf(final_path, sizeof(final_path), "%s/%s", c->upload_dir, filename);
-                if(rename(filepath, final_path)!=0){
-                    perror("rename");
-                }
+                if(rename(filepath, final_path)!=0)
+                    log_msg("WARN", "rename %s -> %s: %s", filepath, final_path, strerror(errno));
             } else {
                 strncpy(final_path, filepath, sizeof(final_path));
             }
-            
-            // Извлекаем только имя файла для ответа
+
             const char *display_name = strrchr(final_path, '/');
             display_name = display_name ? display_name + 1 : final_path;
-            
+
+            log_msg("INFO", "%s -> 200 uploaded \"%s\" (%zu bytes)",
+                    peer_ip, display_name, req.content_length);
+
             char success_msg[512];
             int msg_len = snprintf(success_msg, sizeof(success_msg),
                 "HTTP/1.1 200 OK\r\n"
@@ -235,8 +260,9 @@ int start_server(server_config_t*c){
             send(cl, success_msg, msg_len, 0);
             close(cl); continue;
         }
-        
-        http_error(cl,404,"Not Found"); 
+
+        log_msg("WARN", "%s -> 404 %s %s", peer_ip, req.method, req.path);
+        http_error(cl,404,"Not Found");
         close(cl);
     }
 }
